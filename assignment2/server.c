@@ -21,6 +21,17 @@ int main(int argc, char const *argv[])
     char *hello = "Hello from server";
 
     printf("execve=0x%p\n", execve);
+    printf("process ID of the calling process: %d\n", getpid());
+
+    if (strcmp(argv[0], "child") == 0) {
+        printf("This is a child process\n");
+        int socket = atoi(argv[1]);
+        valread = read(socket , buffer, 1024);
+        printf("%s\n",buffer);
+        send(socket , hello , strlen(hello) , 0);
+        printf("Hello message sent\n");
+        return 0;
+    }
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -68,6 +79,7 @@ int main(int argc, char const *argv[])
 
     if (fid > 0) {
         wait(NULL);
+        return 0;
     } else {
         struct passwd *pw;
 
@@ -80,10 +92,17 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
 
-        valread = read( new_socket , buffer, 1024);
-        printf("%s\n",buffer);
-        send(new_socket , hello , strlen(hello) , 0 );
-        printf("Hello message sent\n");
+        char socket_char [10];
+        sprintf(socket_char, "%d", new_socket);
+        
+        char *args[] = {"child", socket_char, NULL};
+
+        int sig = execvp(argv[0],args);
+
+        if (sig < 0) {
+            perror("Unable to re-exec, terminate.");
+            exit(EXIT_FAILURE);
+        }
     }
     return 0;
 }
